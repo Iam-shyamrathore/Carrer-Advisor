@@ -1,5 +1,6 @@
 import Fastify from 'fastify';
 import dotenv from 'dotenv';
+import profileRoutes from './api/profileRoutes';
 
 dotenv.config();
 
@@ -7,10 +8,13 @@ const server = Fastify({
   logger: true,
 });
 
-// A simple route to check if the server is alive
+// Health check route
 server.get('/health', async (request, reply) => {
   return { status: 'ok' };
 });
+
+// Register our new profile analysis routes
+server.register(profileRoutes, { prefix: '/api/profile' });
 
 const start = async () => {
   try {

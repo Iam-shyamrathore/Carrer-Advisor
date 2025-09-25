@@ -1,31 +1,43 @@
 import { config } from 'dotenv';
+import { GoogleGenerativeAI, GenerationConfig } from '@google/generative-ai';
+
 config();
 
 class GeminiService {
-  private apiKey: string;
+  private genAI: GoogleGenerativeAI;
+  private generationConfig: GenerationConfig;
 
   constructor() {
-    this.apiKey = process.env.GEMINI_API_KEY || '';
-    if (!this.apiKey) {
-      console.warn('GEMINI_API_KEY is not set in environment variables.');
-      // In a real app, you might throw an error here.
-      // throw new Error('GEMINI_API_KEY is not set.');
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      throw new Error('GEMINI_API_KEY is not set in environment variables. Please check your .env file.');
     }
+    this.genAI = new GoogleGenerativeAI(apiKey);
+    
+    // Configure the model to return JSON
+    this.generationConfig = {
+      responseMimeType: "application/json",
+    };
   }
 
-  // This is a placeholder for now. It will eventually call the real Gemini API.
   public async generateContent(prompt: string): Promise<string> {
-    console.log('--- MOCK GEMINI API CALL ---');
-    console.log(`Prompt: ${prompt}`);
-    console.log('----------------------------');
-    
-    // For now, return a mock JSON string to simulate a real response.
-    const mockResponse = {
-      analysis: "This is a mock analysis from the Gemini Service.",
-      suggestions: ["Add more projects.", "Quantify achievements."]
-    };
+    try {
+      // For text-only input, use the gemini-pro model
+      const model = this.genAI.getGenerativeModel({ 
+        model: "gemini-2.5-flash", 
+        generationConfig: this.generationConfig 
+      });
 
-    return JSON.stringify(mockResponse, null, 2);
+      const result = await model.generateContent(prompt);
+      const response = result.response;
+      const text = response.text();
+      
+      console.log('--- LIVE GEMINI API CALL SUCCESSFUL ---');
+      return text;
+    } catch (error) {
+      console.error("Error calling Gemini API:", error);
+      throw new Error("Failed to generate content from Gemini API.");
+    }
   }
 }
 

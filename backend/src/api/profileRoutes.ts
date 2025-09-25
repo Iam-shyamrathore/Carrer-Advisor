@@ -47,17 +47,18 @@ async function profileRoutes(fastify: FastifyInstance, options: FastifyPluginOpt
 
       // Execute analysis
       const analysisResult = await profileAnalyzer.execute({ input: { profileText } });
-      
-      // Save to database
-      const savedAnalysis = await prisma.profileAnalysis.create({
-        data: {
-          profileText: profileText,
-          result: analysisResult, // Prisma handles JSON serialization
-          userId: userId,
-        },
-      });
 
-      return reply.status(201).send(savedAnalysis);
+// Save to database
+        const savedAnalysis = await prisma.profileAnalysis.create({
+        data: {
+            profileText: profileText,
+            // Convert the JSON object to a string before saving
+            result: JSON.stringify(analysisResult), // <-- ADD JSON.stringify() HERE
+            userId: userId,
+        },
+        });
+
+        return reply.status(201).send(savedAnalysis);
 
     } catch (error) {
       if (error instanceof z.ZodError) {

@@ -1,7 +1,8 @@
 import { FastifyInstance, FastifyPluginOptions, FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
 import prisma from '../lib/prisma';
-import { Prisma } from '@prisma/client';
+// Import the specific error type from its runtime location
+import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 
 const SignupBodySchema = z.object({
   email: z.string().email({ message: "Invalid email address" }),
@@ -24,7 +25,8 @@ async function userRoutes(fastify: FastifyInstance, options: FastifyPluginOption
       if (error instanceof z.ZodError) {
         return reply.status(400).send({ message: "Validation error", errors: error.issues });
       }
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      // Use the directly imported error type here
+      if (error instanceof PrismaClientKnownRequestError && error.code === 'P2002') {
         return reply.status(409).send({ message: "A user with this email already exists." });
       }
       fastify.log.error(error, "Error during user signup");

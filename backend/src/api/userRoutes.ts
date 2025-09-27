@@ -33,6 +33,22 @@ async function userRoutes(fastify: FastifyInstance, options: FastifyPluginOption
       return reply.status(500).send({ message: "An internal server error occurred." });
     }
   });
+  fastify.get('/:userId/analyses', async (request: FastifyRequest<{ Params: { userId: string } }>, reply: FastifyReply) => {
+    try {
+      const { userId } = request.params;
+
+      // In a real app, you'd verify that the logged-in user is authorized to see this data.
+      const analyses = await prisma.profileAnalysis.findMany({
+        where: { userId },
+        orderBy: { createdAt: 'desc' }, // Show newest first
+      });
+
+      return reply.status(200).send(analyses);
+    } catch (error) {
+      fastify.log.error(error, "Error fetching user analyses");
+      return reply.status(500).send({ message: "An internal server error occurred." });
+    }
+  });
 }
 
 export default userRoutes;

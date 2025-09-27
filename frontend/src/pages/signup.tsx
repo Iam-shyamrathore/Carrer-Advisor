@@ -16,7 +16,7 @@ const SignupPage: NextPage = () => {
     setError('');
 
     try {
-      const response = await api.post('/api/users/signup', { email });
+      const response = await api.post('/api/v1/users/signup', { email });
       setMessage(`Success! User created with ID: ${response.data.id}. You can now use this ID on the dashboard.`);
       setEmail('');
     } catch (err: any) {

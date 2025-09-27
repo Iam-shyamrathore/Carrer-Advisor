@@ -2,6 +2,7 @@ import Fastify from 'fastify';
 import dotenv from 'dotenv';
 import profileRoutes from './api/profileRoutes';
 import userRoutes from './api/userRoutes';
+import authRoutes from './api/authRoutes';
 
 dotenv.config();
 
@@ -18,8 +19,9 @@ server.get('/health', async (request, reply) => {
   return { status: 'ok' };
 });
 
-server.register(profileRoutes, { prefix: '/api/profile' });
-server.register(userRoutes, { prefix: '/api/users' });
+server.register(profileRoutes, { prefix: '/api/v1/profile' });
+server.register(userRoutes, { prefix: '/api/v1/users' });
+server.register(authRoutes, { prefix: '/api/v1/auth' });
 
 const start = async () => {
   try {

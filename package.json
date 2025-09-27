@@ -1,0 +1,21 @@
+{
+  "name": "career-advisor-monorepo",
+  "private": true,
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
+  "scripts": {
+    "dev:backend": "npm run dev --workspace=backend",
+    "dev:frontend": "npm run dev --workspace=frontend",
+    "postinstall": "prisma generate --schema ./prisma/schema.prisma"
+  },
+  "devDependencies": {
+    "prisma": "^5.14.0"
+  },
+  "dependencies": {
+    "next": "^15.5.4",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1"
+  }
+}

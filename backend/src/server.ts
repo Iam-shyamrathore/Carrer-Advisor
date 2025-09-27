@@ -19,7 +19,7 @@ server.get('/health', async (request, reply) => {
   return { status: 'ok' };
 });
 
-server.register(profileRoutes, { prefix: '/api/v1/profile' });
+server.register(profileRoutes,{ prefix: '/api/v1/profile' });
 server.register(userRoutes, { prefix: '/api/v1/users' });
 server.register(authRoutes, { prefix: '/api/v1/auth' });
 

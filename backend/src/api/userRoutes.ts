@@ -41,6 +41,9 @@ async function userRoutes(fastify: FastifyInstance, options: FastifyPluginOption
       const analyses = await prisma.profileAnalysis.findMany({
         where: { userId },
         orderBy: { createdAt: 'desc' }, // Show newest first
+        include: {
+          roadmap: true,
+        }
       });
 
       return reply.status(200).send(analyses);

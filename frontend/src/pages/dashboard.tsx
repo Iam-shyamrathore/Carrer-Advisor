@@ -4,18 +4,27 @@ import api from '../lib/api';
 import { useSession, signIn } from 'next-auth/react';
 import Link from 'next/link';
 
+type Roadmap = {
+  id: string;
+  phases: string; // JSON string of phases
+};
+
 type AnalysisRecord = {
   id: string;
   profileText: string;
-  result: string;
+  result: string; // JSON string of analysis
   createdAt: string;
+  roadmap: Roadmap | null;
 };
 
 const DashboardPage: NextPage = () => {
   const { data: session, status } = useSession();
+
   const [profileText, setProfileText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isRoadmapLoading, setIsRoadmapLoading] = useState(false);
   const [error, setError] = useState('');
+  
   const [newAnalysisResult, setNewAnalysisResult] = useState<AnalysisRecord | null>(null);
   const [selectedAnalysis, setSelectedAnalysis] = useState<AnalysisRecord | null>(null);
   const [pastAnalyses, setPastAnalyses] = useState<AnalysisRecord[]>([]);
@@ -64,8 +73,28 @@ const DashboardPage: NextPage = () => {
       setIsLoading(false);
     }
   };
-
+  
   const analysisToDisplay = selectedAnalysis || newAnalysisResult;
+
+  const handleGenerateRoadmap = async (analysisId: string) => {
+    if (!analysisId) return;
+    setIsRoadmapLoading(true);
+    setError('');
+    try {
+      const response = await api.post(`/api/v1/profile/${analysisId}/roadmap`);
+      await fetchHistory();
+      
+      const updatedAnalysis = { ...analysisToDisplay, roadmap: response.data } as AnalysisRecord;
+
+      if (newAnalysisResult?.id === analysisId) setNewAnalysisResult(updatedAnalysis);
+      if (selectedAnalysis?.id === analysisId) setSelectedAnalysis(updatedAnalysis);
+
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Could not generate roadmap.');
+    } finally {
+      setIsRoadmapLoading(false);
+    }
+  };
 
   if (status === "loading") {
     return <main className="flex min-h-screen items-center justify-center bg-gray-900 text-white"><p>Loading...</p></main>;
@@ -98,7 +127,6 @@ const DashboardPage: NextPage = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           <div className="md:col-span-1 space-y-6">
-            {/* --- THIS FORM CONTENT WAS MISSING --- */}
             <form onSubmit={handleSubmit} className="p-6 bg-gray-800 rounded-lg space-y-4">
               <textarea
                 value={profileText}
@@ -145,13 +173,41 @@ const DashboardPage: NextPage = () => {
 
           <div className="md:col-span-2">
             {analysisToDisplay ? (
-              <div className="p-6 bg-gray-800 rounded-lg sticky top-8">
-                <h2 className="text-2xl font-bold mb-4">
-                  Analysis Result ({new Date(analysisToDisplay.createdAt).toLocaleDateString()})
-                </h2>
-                <pre className="whitespace-pre-wrap bg-gray-900 p-4 rounded-md text-gray-300 h-[32rem] overflow-y-auto">
-                  {JSON.stringify(JSON.parse(analysisToDisplay.result), null, 2)}
-                </pre>
+              <div className="p-6 bg-gray-800 rounded-lg sticky top-8 space-y-6">
+                <div>
+                  <h2 className="text-2xl font-bold mb-4">Analysis Result</h2>
+                  <pre className="whitespace-pre-wrap bg-gray-900 p-4 rounded-md text-gray-300 max-h-60 overflow-y-auto">
+                    {JSON.stringify(JSON.parse(analysisToDisplay.result), null, 2)}
+                  </pre>
+                </div>
+
+                <div>
+                  <h2 className="text-2xl font-bold mb-4">Career Roadmap</h2>
+                  {isRoadmapLoading ? (
+                    <p>Generating your roadmap...</p>
+                  ) : analysisToDisplay.roadmap ? (
+                    <div className="space-y-4">
+                      {JSON.parse(analysisToDisplay.roadmap.phases).roadmap.map((phase: any, index: number) => (
+                        <div key={index}>
+                          <h3 className="font-semibold text-lg text-blue-300">{phase.title}</h3>
+                          <ul className="list-disc list-inside pl-4 text-gray-400 space-y-1 mt-1">
+                            {phase.milestones.map((milestone: string, mIndex: number) => (
+                              <li key={mIndex}>{milestone}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => handleGenerateRoadmap(analysisToDisplay.id)}
+                      disabled={isRoadmapLoading}
+                      className="w-full px-4 py-2 font-bold text-white bg-green-600 rounded-md hover:bg-green-700 disabled:bg-gray-500"
+                    >
+                      {isRoadmapLoading ? 'Generating...' : '✨ Generate My Roadmap'}
+                    </button>
+                  )}
+                </div>
               </div>
             ) : (
               <div className="p-6 bg-gray-800 rounded-lg flex items-center justify-center h-full">

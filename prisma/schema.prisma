@@ -69,4 +69,15 @@ model ProfileAnalysis {
 
   user   User   @relation(fields: [userId], references: [id])
   userId String
+  roadmap Roadmap?
+}
+
+model Roadmap {
+  id        String   @id @default(cuid())
+  phases    String // Store the generated roadmap phases as a JSON string
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  profileAnalysis   ProfileAnalysis @relation(fields: [profileAnalysisId], references: [id])
+  profileAnalysisId String          @unique // one-to-one relation
 }

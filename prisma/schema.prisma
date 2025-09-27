@@ -80,4 +80,19 @@ model Roadmap {
 
   profileAnalysis   ProfileAnalysis @relation(fields: [profileAnalysisId], references: [id])
   profileAnalysisId String          @unique // one-to-one relation
+
+  resources Resource[]
+}
+
+model Resource {
+  id            String   @id @default(cuid())
+  milestoneText String
+  title         String
+  url           String
+  type          String
+  description   String
+  createdAt     DateTime @default(now())
+
+  roadmap   Roadmap @relation(fields: [roadmapId], references: [id])
+  roadmapId String
 }

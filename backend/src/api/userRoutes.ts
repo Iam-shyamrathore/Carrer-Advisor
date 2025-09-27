@@ -42,7 +42,11 @@ async function userRoutes(fastify: FastifyInstance, options: FastifyPluginOption
         where: { userId },
         orderBy: { createdAt: 'desc' }, // Show newest first
         include: {
-          roadmap: true,
+          roadmap: {
+            include: {
+              resources: true,
+            },
+          }
         }
       });
 

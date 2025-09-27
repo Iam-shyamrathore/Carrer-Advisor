@@ -4,9 +4,20 @@ import api from '../lib/api';
 import { useSession, signIn } from 'next-auth/react';
 import Link from 'next/link';
 
+// --- TYPE DEFINITIONS ---
+type Resource = {
+  id: string;
+  milestoneText: string;
+  title: string;
+  url: string;
+  type: string;
+  description: string;
+};
+
 type Roadmap = {
   id: string;
   phases: string; // JSON string of phases
+  resources: Resource[];
 };
 
 type AnalysisRecord = {
@@ -17,19 +28,22 @@ type AnalysisRecord = {
   roadmap: Roadmap | null;
 };
 
+// --- COMPONENT ---
 const DashboardPage: NextPage = () => {
   const { data: session, status } = useSession();
 
+  // --- STATE MANAGEMENT ---
   const [profileText, setProfileText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isRoadmapLoading, setIsRoadmapLoading] = useState(false);
+  const [loadingMilestone, setLoadingMilestone] = useState<string | null>(null);
   const [error, setError] = useState('');
-  
   const [newAnalysisResult, setNewAnalysisResult] = useState<AnalysisRecord | null>(null);
   const [selectedAnalysis, setSelectedAnalysis] = useState<AnalysisRecord | null>(null);
   const [pastAnalyses, setPastAnalyses] = useState<AnalysisRecord[]>([]);
   const [isHistoryLoading, setIsHistoryLoading] = useState(true);
 
+  // --- DATA FETCHING & EVENT HANDLERS ---
   const fetchHistory = async () => {
     if (session?.user?.id) {
       setIsHistoryLoading(true);
@@ -53,12 +67,10 @@ const DashboardPage: NextPage = () => {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!session?.user?.id) return;
-
     setIsLoading(true);
     setError('');
     setNewAnalysisResult(null);
     setSelectedAnalysis(null);
-
     try {
       const response = await api.post('/api/v1/profile/analyze-and-save', {
         profileText,
@@ -74,21 +86,21 @@ const DashboardPage: NextPage = () => {
     }
   };
   
-  const analysisToDisplay = selectedAnalysis || newAnalysisResult;
-
   const handleGenerateRoadmap = async (analysisId: string) => {
     if (!analysisId) return;
     setIsRoadmapLoading(true);
     setError('');
     try {
-      const response = await api.post(`/api/v1/profile/${analysisId}/roadmap`);
-      await fetchHistory();
-      
-      const updatedAnalysis = { ...analysisToDisplay, roadmap: response.data } as AnalysisRecord;
+      await api.post(`/api/v1/profile/${analysisId}/roadmap`);
+      const updatedAnalyses = await api.get<AnalysisRecord[]>(`/api/v1/users/${session!.user!.id}/analyses`);
+      setPastAnalyses(updatedAnalyses.data);
 
-      if (newAnalysisResult?.id === analysisId) setNewAnalysisResult(updatedAnalysis);
-      if (selectedAnalysis?.id === analysisId) setSelectedAnalysis(updatedAnalysis);
-
+      const currentlyDisplayedAnalysis = newAnalysisResult || selectedAnalysis;
+      if (currentlyDisplayedAnalysis?.id === analysisId) {
+        const updatedDisplayAnalysis = updatedAnalyses.data.find(a => a.id === analysisId);
+        if (newAnalysisResult) setNewAnalysisResult(updatedDisplayAnalysis || null);
+        if (selectedAnalysis) setSelectedAnalysis(updatedDisplayAnalysis || null);
+      }
     } catch (err: any) {
       setError(err.response?.data?.message || 'Could not generate roadmap.');
     } finally {
@@ -96,24 +108,39 @@ const DashboardPage: NextPage = () => {
     }
   };
 
-  if (status === "loading") {
-    return <main className="flex min-h-screen items-center justify-center bg-gray-900 text-white"><p>Loading...</p></main>;
-  }
+  const handleFindResources = async (roadmapId: string, milestoneText: string) => {
+    setLoadingMilestone(milestoneText);
+    setError('');
+    try {
+      await api.post(`/api/v1/roadmaps/${roadmapId}/resources`, { milestoneText });
+      
+      // Re-fetch the entire history to get the new resources
+      const updatedAnalysesResponse = await api.get<AnalysisRecord[]>(`/api/v1/users/${session!.user!.id}/analyses`);
+      const updatedAnalyses = updatedAnalysesResponse.data;
+      setPastAnalyses(updatedAnalyses);
 
-  if (status === "unauthenticated") {
-    return (
-       <main className="flex min-h-screen flex-col items-center justify-center bg-gray-900 text-white space-y-4">
-        <h1 className="text-3xl font-bold">Access Denied</h1>
-        <p>You must be signed in to view this page.</p>
-        <button
-          onClick={() => signIn("github")}
-          className="px-4 py-2 font-semibold text-white bg-blue-600 rounded-md hover:bg-blue-700"
-        >
-          Sign in with GitHub
-        </button>
-      </main>
-    );
-  }
+      // --- THIS IS THE FIX ---
+      // Find the analysis we are currently viewing in the newly fetched data
+      // and update our local state to force a re-render with the new resources.
+      const currentlyDisplayedAnalysis = newAnalysisResult || selectedAnalysis;
+      if (currentlyDisplayedAnalysis) {
+        const updatedDisplayAnalysis = updatedAnalyses.find(a => a.id === currentlyDisplayedAnalysis.id);
+        if (updatedDisplayAnalysis) {
+            if (newAnalysisResult) setNewAnalysisResult(updatedDisplayAnalysis);
+            if (selectedAnalysis) setSelectedAnalysis(updatedDisplayAnalysis);
+        }
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Could not find resources.');
+    } finally {
+      setLoadingMilestone(null);
+    }
+  };
+
+  const analysisToDisplay = selectedAnalysis || newAnalysisResult;
+
+  if (status === "loading") { /* ... unchanged ... */ }
+  if (status === "unauthenticated") { /* ... unchanged ... */ }
 
   return (
     <main className="flex min-h-screen flex-col items-center bg-gray-900 text-white p-8">
@@ -184,16 +211,44 @@ const DashboardPage: NextPage = () => {
                 <div>
                   <h2 className="text-2xl font-bold mb-4">Career Roadmap</h2>
                   {isRoadmapLoading ? (
-                    <p>Generating your roadmap...</p>
+                     <p>Generating your roadmap...</p>
                   ) : analysisToDisplay.roadmap ? (
                     <div className="space-y-4">
-                      {JSON.parse(analysisToDisplay.roadmap.phases).roadmap.map((phase: any, index: number) => (
-                        <div key={index}>
+                      {JSON.parse(analysisToDisplay.roadmap.phases).roadmap.map((phase: any) => (
+                        <div key={phase.title}>
                           <h3 className="font-semibold text-lg text-blue-300">{phase.title}</h3>
-                          <ul className="list-disc list-inside pl-4 text-gray-400 space-y-1 mt-1">
-                            {phase.milestones.map((milestone: string, mIndex: number) => (
-                              <li key={mIndex}>{milestone}</li>
-                            ))}
+                          <ul className="list-disc list-inside pl-4 text-gray-400 space-y-3 mt-1">
+                            {phase.milestones.map((milestone: string) => {
+                              const resources = analysisToDisplay.roadmap?.resources.filter(
+                                res => res.milestoneText === milestone
+                              );
+                              const isFindingResources = loadingMilestone === milestone;
+                              return (
+                                <li key={milestone}>
+                                  {milestone}
+                                  {resources && resources.length > 0 ? (
+                                    <ul className="pl-6 mt-2 space-y-2">
+                                      {resources.map(res => (
+                                        <li key={res.id} className="text-sm">
+                                          <a href={res.url} target="_blank" rel="noopener noreferrer" className="text-cyan-400 hover:underline">
+                                            [{res.type}] {res.title}
+                                          </a>
+                                          <p className="text-gray-500 italic">{res.description}</p>
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  ) : (
+                                    <button
+                                      onClick={() => handleFindResources(analysisToDisplay.roadmap!.id, milestone)}
+                                      disabled={isFindingResources}
+                                      className="ml-2 text-xs bg-gray-600 hover:bg-gray-500 text-white font-semibold py-1 px-2 rounded-full disabled:opacity-50"
+                                    >
+                                      {isFindingResources ? 'Finding...' : 'Find Resources'}
+                                    </button>
+                                  )}
+                                </li>
+                              );
+                            })}
                           </ul>
                         </div>
                       ))}

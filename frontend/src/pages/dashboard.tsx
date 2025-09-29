@@ -3,7 +3,7 @@ import type { NextPage } from 'next';
 import api from '../lib/api';
 import { useSession, signIn } from 'next-auth/react';
 import Link from 'next/link';
-
+import ChatModal from '../components/ChatModal';
 // --- TYPE DEFINITIONS ---
 type Resource = {
   id: string;
@@ -42,6 +42,8 @@ const DashboardPage: NextPage = () => {
   const [selectedAnalysis, setSelectedAnalysis] = useState<AnalysisRecord | null>(null);
   const [pastAnalyses, setPastAnalyses] = useState<AnalysisRecord[]>([]);
   const [isHistoryLoading, setIsHistoryLoading] = useState(true);
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [activeMilestone, setActiveMilestone] = useState('');
 
   // --- DATA FETCHING & EVENT HANDLERS ---
   const fetchHistory = async () => {
@@ -226,6 +228,35 @@ const DashboardPage: NextPage = () => {
                               return (
                                 <li key={milestone}>
                                   {milestone}
+                                  
+                                  {/* --- CHANGES ARE HERE --- */}
+                                  <div className="inline-flex items-center align-middle ml-2 space-x-2">
+                                    
+                                    {/* Find Resources Button (only shows if no resources exist yet) */}
+                                    {(!resources || resources.length === 0) && (
+                                      <button
+                                        onClick={() => handleFindResources(analysisToDisplay.roadmap!.id, milestone)}
+                                        disabled={isFindingResources}
+                                        className="text-xs bg-gray-600 hover:bg-gray-500 text-white font-semibold py-1 px-2 rounded-full disabled:opacity-50"
+                                      >
+                                        {isFindingResources ? 'Finding...' : 'Find Resources'}
+                                      </button>
+                                    )}
+
+                                    {/* NEW: Get Help Button */}
+                                    <button
+                                      onClick={() => {
+                                        setActiveMilestone(milestone);
+                                        setIsChatOpen(true);
+                                      }}
+                                      title="Get help from the AI Coach"
+                                      className="text-xs bg-purple-600 hover:bg-purple-500 text-white font-semibold py-1 px-2 rounded-full"
+                                    >
+                                      Get Help
+                                    </button>
+                                  </div>
+
+                                  {/* Resource List (only shows if resources exist) */}
                                   {resources && resources.length > 0 ? (
                                     <ul className="pl-6 mt-2 space-y-2">
                                       {resources.map(res => (
@@ -237,15 +268,7 @@ const DashboardPage: NextPage = () => {
                                         </li>
                                       ))}
                                     </ul>
-                                  ) : (
-                                    <button
-                                      onClick={() => handleFindResources(analysisToDisplay.roadmap!.id, milestone)}
-                                      disabled={isFindingResources}
-                                      className="ml-2 text-xs bg-gray-600 hover:bg-gray-500 text-white font-semibold py-1 px-2 rounded-full disabled:opacity-50"
-                                    >
-                                      {isFindingResources ? 'Finding...' : 'Find Resources'}
-                                    </button>
-                                  )}
+                                  ) : null}
                                 </li>
                               );
                             })}
@@ -272,6 +295,12 @@ const DashboardPage: NextPage = () => {
           </div>
         </div>
       </div>
+      <ChatModal
+        isOpen={isChatOpen}
+        onClose={() => setIsChatOpen(false)}
+        milestoneText={activeMilestone}
+        userId={session!.user!.id}
+      />
     </main>
   );
 };

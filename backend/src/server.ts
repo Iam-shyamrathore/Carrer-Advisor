@@ -4,6 +4,7 @@ import profileRoutes from './api/profileRoutes';
 import userRoutes from './api/userRoutes';
 import authRoutes from './api/authRoutes';
 import roadmapRoutes from './api/roadmapRoutes';
+import troubleshootingRoutes from './api/troubleshootingRoutes';
 dotenv.config();
 
 const server = Fastify({
@@ -19,6 +20,8 @@ server.get('/health', async (request, reply) => {
   return { status: 'ok' };
 });
 
+
+server.register(troubleshootingRoutes, { prefix: '/api/v1/troubleshooting' });
 server.register(profileRoutes,{ prefix: '/api/v1/profile' });
 server.register(userRoutes, { prefix: '/api/v1/users' });
 server.register(authRoutes, { prefix: '/api/v1/auth' });

@@ -55,6 +55,22 @@ class GeminiService {
       throw new Error("Failed to generate content from Gemini API.");
     }
   }
+  public async generateChatResponse(
+    prompt: string,
+    history: { role: 'user' | 'model'; parts: { text: string }[] }[]
+  ): Promise<string> {
+    try {
+      const model = this.genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+      const chat = model.startChat({ history });
+      const result = await chat.sendMessage(prompt);
+      const response = result.response;
+      return response.text();
+    } catch (error) {
+      console.error('Error generating chat response from Gemini API:', error);
+      throw new Error('Failed to get chat response from Gemini API.');
+    }
+  }
+  
 }
 
 export const geminiService = new GeminiService();

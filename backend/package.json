@@ -1,0 +1,33 @@
+{
+  "name": "career-advisor-backend",
+  "version": "1.0.0",
+  "description": "Backend service for the Career Advisor MVP",
+  "main": "dist/server.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "dev": "ts-node-dev --respawn --transpile-only src/server.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@auth/prisma-adapter": "^2.10.0",
+    "@google/generative-ai": "^0.24.1",
+    "@prisma/client": "^5.22.0",
+    "axios": "^1.12.2",
+    "dotenv": "^16.4.5",
+    "fastify": "^4.27.0",
+    "next-auth": "^4.24.11",
+    "node-cache": "^5.1.2",
+    "zod": "^3.23.8",
+    "@fastify/multipart": "^8.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.12.12",
+    "@types/node-cache": "^3.0.0",
+    "prisma": "^5.22.0",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^5.4.5"
+  }
+}
